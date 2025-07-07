@@ -68,7 +68,7 @@ class NuclideQuery:
         if data_file is None:
             data_file = config.DATA_FILE_PATH
         self.data_loader = NuclideDataLoader(data_file, query_config)
-        self.rich_printer = NuclideRichPrinter(self.data_loader.query_config)
+        self.rich_printer = NuclideRichPrinter(query_config)
         
     def query_nuclide(self, Z: int, N: int) -> Optional[NuclideProperties]:
         """

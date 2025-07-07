@@ -17,9 +17,21 @@ class DecayMode(Enum):
 @dataclass
 class ValueWithUncertainty:
     """带不确定度的数值"""
-    value: float
-    uncertainty: float = 0.0
+    value: Optional[float] = None
+    uncertainty: Optional[float] = None
     unit: str = ""
+
+    def __mul__(self, other: int) -> 'ValueWithUncertainty':
+        """乘法运算"""
+        new_value = self.value * other if self.value is not None else None
+        new_uncertainty = self.uncertainty * other if self.uncertainty is not None else None
+        return ValueWithUncertainty(new_value, new_uncertainty, self.unit)
+
+    def __truediv__(self, other: int) -> 'ValueWithUncertainty':
+        """除法运算"""
+        new_value = self.value / other if self.value is not None else None
+        new_uncertainty = self.uncertainty / other if self.uncertainty is not None else None
+        return ValueWithUncertainty(new_value, new_uncertainty, self.unit)
 
 @dataclass
 class HalfLifeInfo:
@@ -61,6 +73,7 @@ class NuclideProperties(NuclidePropertiesRequired, total=False):
     
     # 能量相关 (最常见字段)
     bindingEnergy: Optional[ValueWithUncertainty]  # 结合能
+    bindingEnergyPerNucleon: Optional[ValueWithUncertainty]  # 每核结合能
     bindingEnergyLDMFit: Optional[ValueWithUncertainty]  # LDM拟合结合能
 
     # 分离能 (高频字段)
@@ -69,18 +82,16 @@ class NuclideProperties(NuclidePropertiesRequired, total=False):
     twoNeutronSeparationEnergy: Optional[ValueWithUncertainty]  # 双中子分离能
     twoProtonSeparationEnergy: Optional[ValueWithUncertainty]  # 双质子分离能
 
+    # 结构信息（导出量）
+    pairingGap: Optional[ValueWithUncertainty]  # 配对能隙
+    quadrupoleDeformation: Optional[ValueWithUncertainty]  # 四极形变
+    
     # 衰变相关 Q值
     alpha: Optional[ValueWithUncertainty]  # α衰变Q值
-    deltaAlpha: Optional[ValueWithUncertainty]  # α衰变Q值不确定度
+    deltaAlpha: Optional[ValueWithUncertainty]  # α衰变Q值的变化量
     betaMinus: Optional[ValueWithUncertainty]  # β-能量
     electronCapture: Optional[ValueWithUncertainty]  # 电子俘获能量
     positronEmission: Optional[ValueWithUncertainty]  # 正电子发射能量
-
-    # 核结构参数
-    pairingGap: Optional[ValueWithUncertainty]  # 配对能隙
-    quadrupoleDeformation: Optional[ValueWithUncertainty]  # 四极形变
-
-    # 多中子/质子衰变模式
     betaMinusOneNeutronEmission: Optional[ValueWithUncertainty]  # β-+中子发射
     betaMinusTwoNeutronEmission: Optional[ValueWithUncertainty]  # β-+双中子发射
     electronCaptureOneProtonEmission: Optional[ValueWithUncertainty]  # EC+质子发射

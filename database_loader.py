@@ -85,103 +85,118 @@ class NuclideDataLoader:
                     'levels': levels,
                     'ground_state': ground_state,
                     
-                    # 直接存储JSON原始字段，保持字段名一致
+                    # 结合能
                     'bindingEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('bindingEnergy'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('bindingEnergy')
+                    )*A,
+                    'bindingEnergyPerNucleon': self._parse_value_with_uncertainty(
+                        nuclide_data.get('bindingEnergy')
+                    ),
                     'bindingEnergyLDMFit': self._parse_value_with_uncertainty(
-                        nuclide_data.get('bindingEnergyLDMFit'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('bindingEnergyLDMFit')
+                    ),
+
+                    # 分离能
                     'neutronSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('neutronSeparationEnergy'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('neutronSeparationEnergy')
+                    ),
                     'protonSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('protonSeparationEnergy'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('protonSeparationEnergy')
+                    ),
                     'twoNeutronSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('twoNeutronSeparationEnergy'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('twoNeutronSeparationEnergy')
+                    ),
                     'twoProtonSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('twoProtonSeparationEnergy'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
-                    'alpha': self._parse_value_with_uncertainty(
-                        nuclide_data.get('alpha'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
-                    'deltaAlpha': self._parse_value_with_uncertainty(
-                        nuclide_data.get('deltaAlpha'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
-                    'betaMinus': self._parse_value_with_uncertainty(
-                        nuclide_data.get('betaMinus'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
-                    'electronCapture': self._parse_value_with_uncertainty(
-                        nuclide_data.get('electronCapture'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
-                    'positronEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('positronEmission'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('twoProtonSeparationEnergy')
+                    ),
+
+                    # 结构信息（导出量）
                     'pairingGap': self._parse_value_with_uncertainty(
-                        nuclide_data.get('pairingGap'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('pairingGap')
+                    ),
                     'quadrupoleDeformation': self._parse_value_with_uncertainty(
-                        nuclide_data.get('quadrupoleDeformation')  # 四极形变是无量纲的，不需要转换
-                        ) or ValueWithUncertainty(0.0, 0.0, ""),
+                        nuclide_data.get('quadrupoleDeformation')
+                    ),
+
+                    # 衰变相关Q值
+                    'alpha': self._parse_value_with_uncertainty(
+                        nuclide_data.get('alpha')
+                        ),
+                    'deltaAlpha': self._parse_value_with_uncertainty(
+                        nuclide_data.get('deltaAlpha')
+                        ),
+                    'betaMinus': self._parse_value_with_uncertainty(
+                        nuclide_data.get('betaMinus')
+                        ),
+                    'electronCapture': self._parse_value_with_uncertainty(
+                        nuclide_data.get('electronCapture')
+                        ),
+                    'positronEmission': self._parse_value_with_uncertainty(
+                        nuclide_data.get('positronEmission')
+                        ),
                     'betaMinusOneNeutronEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('betaMinusOneNeutronEmission'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('betaMinusOneNeutronEmission')
+                        ),
                     'betaMinusTwoNeutronEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('betaMinusTwoNeutronEmission'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('betaMinusTwoNeutronEmission')
+                        ),
                     'electronCaptureOneProtonEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('electronCaptureOneProtonEmission'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('electronCaptureOneProtonEmission')
+                        ),
                     'doubleBetaMinus': self._parse_value_with_uncertainty(
-                        nuclide_data.get('doubleBetaMinus'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('doubleBetaMinus')
+                        ),
                     'doubleElectronCapture': self._parse_value_with_uncertainty(
-                        nuclide_data.get('doubleElectronCapture'), scale=1e-3 # 将keV转换为MeV
-                        ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('doubleElectronCapture')
+                        ),
+                    
+                    # 激发态能量
                     'firstExcitedStateEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstExcitedStateEnergy'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('firstExcitedStateEnergy')
+                    ),
                     'firstTwoPlusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstTwoPlusEnergy'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('firstTwoPlusEnergy')
+                    ),
                     'firstFourPlusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstFourPlusEnergy'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('firstFourPlusEnergy')
+                    ),
                     'firstFourPlusOverFirstTwoPlusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstFourPlusOverFirstTwoPlusEnergy'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('firstFourPlusOverFirstTwoPlusEnergy')
+                    ),
                     'firstThreeMinusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstThreeMinusEnergy'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('firstThreeMinusEnergy')
+                    ),
+                    
+                    
                     'BE4DBE2': self._parse_value_with_uncertainty(
-                        nuclide_data.get('BE4DBE2'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('BE4DBE2')
+                    ),
+                    
+                    # 核裂变产额
                     'FY235U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY235U'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('FY235U')
+                    ),
                     'FY238U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY238U'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('FY238U')
+                    ),
                     'FY239Pu': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY239Pu'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('FY239Pu')
+                    ),
                     'FY252Cf': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY252Cf'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('FY252Cf')
+                    ),
                     'cFY235U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY235U'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('cFY235U')
+                    ),
                     'cFY238U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY238U'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('cFY238U')
+                    ),
                     'cFY239Pu': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY239Pu'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('cFY239Pu')
+                    ),
                     'cFY252Cf': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY252Cf'), scale=1e-3 # 将keV转换为MeV
-                    ) or ValueWithUncertainty(0.0, 0.0, "MeV"),
+                        nuclide_data.get('cFY252Cf')
+                    ),
 
                     # 核反应数据（如果需要，基于实际JSON添加）
                     'thermal_neutron_capture': self._parse_thermal_neutron_capture(
@@ -250,22 +265,29 @@ class NuclideDataLoader:
         # 默认返回未知
         return DecayMode.UNKNOWN
     
-    def _parse_value_with_uncertainty(self, data, scale=1.0) -> Optional[ValueWithUncertainty]:
+    def _parse_value_with_uncertainty(self, data) -> ValueWithUncertainty:
         """解析带不确定度的数值"""
         if not data or not isinstance(data, dict):
-            return None
+            return ValueWithUncertainty(None, None, '')
         
         value = data.get('value')
         uncertainty = data.get('uncertainty', 0.0)
         unit = data.get('unit', '')
         
         if value is None:
-            return None
+            return ValueWithUncertainty(None, None, unit or '')
         
         # 确保uncertainty不是None
         if uncertainty is None:
             uncertainty = 0.0
             
+        scale = 1.0
+        if unit == 'keV':
+            scale = 1e-3
+            unit = 'MeV'  # 将keV转换为MeV
+        elif unit is None:
+            unit = ''
+
         return ValueWithUncertainty(
             value=float(value) * scale,
             uncertainty=float(uncertainty) * scale,
@@ -275,12 +297,12 @@ class NuclideDataLoader:
     def _parse_level_info(self, level_data: Dict) -> LevelInfo:
         """解析能级信息"""
         energy = self._parse_value_with_uncertainty(
-            level_data.get('energy'), scale=1e-3  # keV to MeV
-        ) or ValueWithUncertainty(0.0, 0.0, "MeV")
+            level_data.get('energy')
+        )
         
         mass_excess = self._parse_value_with_uncertainty(
-            level_data.get('massExcess'), scale=1e-3  # keV to MeV
-        ) or ValueWithUncertainty(0.0, 0.0, "MeV")
+            level_data.get('massExcess')
+        )
         
         # 解析半衰期
         halflife = None
