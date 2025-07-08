@@ -11,14 +11,14 @@ class ValueWithUncertainty:
 
     def __mul__(self, other: int) -> 'ValueWithUncertainty':
         """乘法运算"""
-        new_value = self.value * other if self.value is float else None
-        new_uncertainty = self.uncertainty * other if self.uncertainty is float else None
+        new_value = self.value * other if isinstance(self.value, float) else None
+        new_uncertainty = self.uncertainty * other if isinstance(self.uncertainty, float) else None
         return ValueWithUncertainty(new_value, new_uncertainty, self.unit)
 
     def __truediv__(self, other: int) -> 'ValueWithUncertainty':
         """除法运算"""
-        new_value = self.value / other if self.value is float else None
-        new_uncertainty = self.uncertainty / other if self.uncertainty is float else None
+        new_value = self.value / other if isinstance(self.value, float) else None
+        new_uncertainty = self.uncertainty / other if isinstance(self.uncertainty, float) else None
         return ValueWithUncertainty(new_value, new_uncertainty, self.unit)
 
 @dataclass

@@ -53,32 +53,32 @@ class NuclideDataLoader:
             with open(self.data_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            for nuclide_name, nuclide_data in data.items():
+            for nuclide_name, nuclide_data_temp in data.items():
                 # 跳过没有基本信息的条目
-                if not isinstance(nuclide_data, dict):
+                if not isinstance(nuclide_data_temp, dict):
                     continue
                     
-                Z = nuclide_data['z']
-                N = nuclide_data['n']
-                A = nuclide_data['a']
+                Z = nuclide_data_temp['z']
+                N = nuclide_data_temp['n']
+                A = nuclide_data_temp['a']
                 
                 # 处理能级信息
                 levels = []
                 ground_state = None
-                if 'levels' in nuclide_data and nuclide_data['levels']:
-                    for level_data in nuclide_data['levels']:
+                if 'levels' in nuclide_data_temp and nuclide_data_temp['levels']:
+                    for level_data in nuclide_data_temp['levels']:
                         level_info = self._parse_level_info(level_data)
                         levels.append(level_info)
                         if level_info.energy.value == 0:  # 基态
                             ground_state = level_info
-                
+
                 # 创建完整的核素属性对象，直接使用JSON字段名
                 nuclide_props: NuclideProperties = {
                     # 必需字段
                     'Z': Z,
                     'N': N,
                     'A': A,
-                    'name': nuclide_data.get('name', nuclide_name),
+                    'name': nuclide_data_temp.get('name', nuclide_name),
                     'symbol': ELEMENT_SYMBOLS.get(Z, f"X{Z}"),
                     
                     # 可选字段 - 能级信息
@@ -87,120 +87,120 @@ class NuclideDataLoader:
                     
                     # 结合能
                     'bindingEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('bindingEnergy')
+                        nuclide_data_temp.get('bindingEnergy')
                     )*A,
                     'bindingEnergyPerNucleon': self._parse_value_with_uncertainty(
-                        nuclide_data.get('bindingEnergy')
+                        nuclide_data_temp.get('bindingEnergy')
                     ),
                     'bindingEnergyLDMFit': self._parse_value_with_uncertainty(
-                        nuclide_data.get('bindingEnergyLDMFit')
+                        nuclide_data_temp.get('bindingEnergyLDMFit')
                     ),
 
                     # 分离能
                     'neutronSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('neutronSeparationEnergy')
+                        nuclide_data_temp.get('neutronSeparationEnergy')
                     ),
                     'protonSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('protonSeparationEnergy')
+                        nuclide_data_temp.get('protonSeparationEnergy')
                     ),
                     'twoNeutronSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('twoNeutronSeparationEnergy')
+                        nuclide_data_temp.get('twoNeutronSeparationEnergy')
                     ),
                     'twoProtonSeparationEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('twoProtonSeparationEnergy')
+                        nuclide_data_temp.get('twoProtonSeparationEnergy')
                     ),
 
                     # 结构信息（导出量）
                     'pairingGap': self._parse_value_with_uncertainty(
-                        nuclide_data.get('pairingGap')
+                        nuclide_data_temp.get('pairingGap')
                     ),
                     'quadrupoleDeformation': self._parse_value_with_uncertainty(
-                        nuclide_data.get('quadrupoleDeformation')
+                        nuclide_data_temp.get('quadrupoleDeformation')
                     ),
 
                     # 衰变相关Q值
                     'alpha': self._parse_value_with_uncertainty(
-                        nuclide_data.get('alpha')
+                        nuclide_data_temp.get('alpha')
                         ),
                     'deltaAlpha': self._parse_value_with_uncertainty(
-                        nuclide_data.get('deltaAlpha')
+                        nuclide_data_temp.get('deltaAlpha')
                         ),
                     'betaMinus': self._parse_value_with_uncertainty(
-                        nuclide_data.get('betaMinus')
+                        nuclide_data_temp.get('betaMinus')
                         ),
                     'electronCapture': self._parse_value_with_uncertainty(
-                        nuclide_data.get('electronCapture')
+                        nuclide_data_temp.get('electronCapture')
                         ),
                     'positronEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('positronEmission')
+                        nuclide_data_temp.get('positronEmission')
                         ),
                     'betaMinusOneNeutronEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('betaMinusOneNeutronEmission')
+                        nuclide_data_temp.get('betaMinusOneNeutronEmission')
                         ),
                     'betaMinusTwoNeutronEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('betaMinusTwoNeutronEmission')
+                        nuclide_data_temp.get('betaMinusTwoNeutronEmission')
                         ),
                     'electronCaptureOneProtonEmission': self._parse_value_with_uncertainty(
-                        nuclide_data.get('electronCaptureOneProtonEmission')
+                        nuclide_data_temp.get('electronCaptureOneProtonEmission')
                         ),
                     'doubleBetaMinus': self._parse_value_with_uncertainty(
-                        nuclide_data.get('doubleBetaMinus')
+                        nuclide_data_temp.get('doubleBetaMinus')
                         ),
                     'doubleElectronCapture': self._parse_value_with_uncertainty(
-                        nuclide_data.get('doubleElectronCapture')
+                        nuclide_data_temp.get('doubleElectronCapture')
                         ),
                     
                     # 激发态能量
                     'firstExcitedStateEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstExcitedStateEnergy')
+                        nuclide_data_temp.get('firstExcitedStateEnergy')
                     ),
                     'firstTwoPlusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstTwoPlusEnergy')
+                        nuclide_data_temp.get('firstTwoPlusEnergy')
                     ),
                     'firstFourPlusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstFourPlusEnergy')
+                        nuclide_data_temp.get('firstFourPlusEnergy')
                     ),
                     'firstFourPlusOverFirstTwoPlusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstFourPlusOverFirstTwoPlusEnergy')
+                        nuclide_data_temp.get('firstFourPlusOverFirstTwoPlusEnergy')
                     ),
                     'firstThreeMinusEnergy': self._parse_value_with_uncertainty(
-                        nuclide_data.get('firstThreeMinusEnergy')
+                        nuclide_data_temp.get('firstThreeMinusEnergy')
                     ),
                     
                     
                     'BE4DBE2': self._parse_value_with_uncertainty(
-                        nuclide_data.get('BE4DBE2')
+                        nuclide_data_temp.get('BE4DBE2')
                     ),
                     
                     # 核裂变产额
                     'FY235U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY235U')
+                        nuclide_data_temp.get('FY235U')
                     ),
                     'FY238U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY238U')
+                        nuclide_data_temp.get('FY238U')
                     ),
                     'FY239Pu': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY239Pu')
+                        nuclide_data_temp.get('FY239Pu')
                     ),
                     'FY252Cf': self._parse_value_with_uncertainty(
-                        nuclide_data.get('FY252Cf')
+                        nuclide_data_temp.get('FY252Cf')
                     ),
                     'cFY235U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY235U')
+                        nuclide_data_temp.get('cFY235U')
                     ),
                     'cFY238U': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY238U')
+                        nuclide_data_temp.get('cFY238U')
                     ),
                     'cFY239Pu': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY239Pu')
+                        nuclide_data_temp.get('cFY239Pu')
                     ),
                     'cFY252Cf': self._parse_value_with_uncertainty(
-                        nuclide_data.get('cFY252Cf')
+                        nuclide_data_temp.get('cFY252Cf')
                     ),
 
                     # 核反应数据（如果需要，基于实际JSON添加）
                     'thermal_neutron_capture': self._parse_thermal_neutron_capture(
-                        nuclide_data.get('thermalNeutronCapture')
+                        nuclide_data_temp.get('thermalNeutronCapture')
                     ),
                 }
                 
