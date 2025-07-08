@@ -35,9 +35,9 @@ class NuclideRichPrinter:
         self.console = Console()
         self.config = query_config
         
-        # 计算表格宽度（终端宽度的80%）
+        # 计算表格宽度（终端宽度的85%）
         terminal_width = self.console.size.width
-        self.table_width = int(terminal_width * 0.8)
+        self.table_width = int(terminal_width * 0.85)
         
         # 定义颜色主题
         self.theme = {
@@ -59,7 +59,31 @@ class NuclideRichPrinter:
             'fission_yield': 'bold green',
             'level': 'bold red',
         }
-    
+
+    def format_float(self, value: Optional[float], max_len: int):
+        """格式化整数或浮点数为指定长度，尽可能保持高精度"""
+        if value is None:
+            return ""
+        # 符号位长度
+        sign_len = 1
+
+        # 整数部分长度（包括可能为 0 的情况）
+        int_part = str(abs(int(value)))
+        int_len = len(int_part)
+
+        # 至少需要的位置: 整数部分 + 小数点 + 符号
+        min_required = int_len + 1 + sign_len  # +1 for the decimal point
+
+        if min_required > max_len:
+            # 无法满足最大长度要求，回退为科学计数法或截断显示
+            return f".{max_len - sign_len - 5}e"  # 如 "6.2e"
+
+        # 允许的小数位数
+        decimal_places = max_len - int_len - 1 - sign_len
+
+        return f"{max_len}.{decimal_places}f"
+        
+
     def format_value(self, data, style="value", scientific=False):
         """格式化各种数值（包括不带/带不确定度，不带/带单位的数值，返回Rich Text对象"""
         if not data:
@@ -86,16 +110,18 @@ class NuclideRichPrinter:
         
         # 格式化数值，如果小于1e-3则使用科学计数法
         if isinstance(value, (int, float)):
-            if value < 1e-3:
+            if abs(value) < 1e-3 or abs(value) > 1e8:
                 scientific = True
-        fmt = "e" if scientific else "f"
-        precision = getattr(self.config, 'decimal_places', 3) if self.config else 3
         
+        if scientific:
+            value_fmt = '10.3e'
+        else:
+            value_fmt = self.format_float(value, 10)
+
         # 构建Rich Text对象
         text = Text()
         
-        # 主要数值
-        text.append(f"{value:.{precision}{fmt}}", style=style)
+        text.append(f"{value:{value_fmt}}", style=style)
         
         # 不确定度
         if (getattr(self.config, 'show_uncertainties', True) if self.config else True) and uncertainty:
@@ -103,28 +129,42 @@ class NuclideRichPrinter:
                 # 处理复杂不确定度格式
                 if uncertainty.get('type') == 'symmetric':
                     unc_val = uncertainty.get('value', 0)
+                    if scientific:
+                        unc_fmt = '10.3e'
+                    else:
+                        unc_fmt = self.format_float(unc_val, 10)
                     if unc_val > 0:
                         text.append(" ± ", style=self.theme['uncertainty'])
-                        text.append(f"{unc_val:.{precision}{fmt}}", style=self.theme['uncertainty'])
+                        text.append(f"{unc_val:{unc_fmt}}", style=self.theme['uncertainty'])
                 elif uncertainty.get('type') == 'asymmetric':
                     upper = uncertainty.get('upperLimit', 0)
                     lower = uncertainty.get('lowerLimit', 0)
+                    if scientific:
+                        upper_fmt = '10.3e'
+                        lower_fmt = '10.3e'
+                    else:
+                        upper_fmt = self.format_float(upper, 10)
+                        lower_fmt = self.format_float(lower, 10)
                     if upper > 0 or lower > 0:
                         text.append(" +", style=self.theme['uncertainty'])
-                        text.append(f"{upper:.{precision}{fmt}}", style=self.theme['uncertainty'])
+                        text.append(f"{upper:{upper_fmt}}", style=self.theme['uncertainty'])
                         text.append("/-", style=self.theme['uncertainty'])
-                        text.append(f"{lower:.{precision}{fmt}}", style=self.theme['uncertainty'])
+                        text.append(f"{lower:{lower_fmt}}", style=self.theme['uncertainty'])
                 elif uncertainty.get('type') == 'approximation':
-                    text = Text.assemble(Text("~", style=self.theme['uncertainty']), text)
+                    text = Text.assemble(Text("~ ", style=self.theme['uncertainty']), text)
                 elif uncertainty.get('type') == 'limit':
                     if uncertainty.get('limitType') == 'upper':
-                        text = Text.assemble(Text("≤", style=self.theme['uncertainty']), text)
+                        text = Text.assemble(Text("≤ ", style=self.theme['uncertainty']), text)
                     elif uncertainty.get('limitType') == 'lower':
-                        text = Text.assemble(Text("≥", style=self.theme['uncertainty']), text)
+                        text = Text.assemble(Text("≥ ", style=self.theme['uncertainty']), text)
 
             elif isinstance(uncertainty, (int, float)) and uncertainty > 0:
+                if scientific:
+                    uncertainty_fmt = '10.3e'
+                else:
+                    uncertainty_fmt = self.format_float(uncertainty, 10)
                 text.append(" ± ", style=self.theme['uncertainty'])
-                text.append(f"{uncertainty:.{precision}{fmt}}", style=self.theme['uncertainty'])
+                text.append(f"{uncertainty:{uncertainty_fmt}}", style=self.theme['uncertainty'])
         text.append(f" {unit}", style=self.theme['unit'])
         
         return text
@@ -310,11 +350,11 @@ class NuclideRichPrinter:
             if energy_levels:                
                 # 定义能级表格的列
                 energy_columns = [
-                    ("能量 (MeV)", int(self.table_width*0.2), self.theme['value']),
-                    ("半衰期", int(self.table_width*0.25), self.theme['value']),
-                    ("自旋宇称", int(self.table_width*0.125), self.theme['value']),
-                    ("衰变模式", int(self.table_width*0.125), self.theme['value']),
-                    ("分支比(%)", int(self.table_width*0.3), self.theme['value']),
+                    ("能量 (MeV)", int(self.table_width*0.18), self.theme['value']),
+                    ("半衰期", int(self.table_width*0.30), self.theme['value']),
+                    ("自旋宇称", int(self.table_width*0.12), self.theme['value']),
+                    ("衰变模式", int(self.table_width*0.12), self.theme['value']),
+                    ("分支比(%)", int(self.table_width*0.28), self.theme['value']),
                 ]
                 # 创建能级表格
                 energy_table = self._create_standard_table(
