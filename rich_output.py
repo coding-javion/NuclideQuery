@@ -38,9 +38,6 @@ class NuclideRichPrinter:
         # 计算表格宽度（终端宽度的80%）
         terminal_width = self.console.size.width
         self.table_width = int(terminal_width * 0.8)
-        # 设置列宽比例 (4:6)
-        self.key_width = int(self.table_width * 0.4)
-        self.value_width = int(self.table_width * 0.6)
         
         # 定义颜色主题
         self.theme = {
@@ -60,8 +57,7 @@ class NuclideRichPrinter:
             'excitation': 'bold magenta',
             'Q_value': 'bold cyan',
             'fission_yield': 'bold green',
-            'level': 'bold blue',
-            'decay': 'bold red',
+            'level': 'bold red',
         }
     
     def format_value(self, data, style="value", scientific=False):
@@ -70,14 +66,23 @@ class NuclideRichPrinter:
             return None
         
         # 处理 ValueWithUncertainty 对象
-        if hasattr(data, 'value') and hasattr(data, 'uncertainty') and hasattr(data, 'unit'):
-            value, uncertainty, unit = data.value, data.uncertainty, data.unit
+        if hasattr(data, 'value'):
+            value = data.value
+            uncertainty = data.uncertainty if hasattr(data, 'uncertainty') else None
+            unit = data.unit if hasattr(data, 'unit') else ''
         else:
             return Text(str(data), style=style)
         
         if value is None:
             return None
         
+        # 如果值是字符串（如 "STABLE"），直接返回
+        if isinstance(value, str):
+            text = Text()
+            text.append(value, style=style)
+            if unit:
+                text.append(f" {unit}", style=self.theme['unit'])
+            return text
         
         # 格式化数值，如果小于1e-3则使用科学计数法
         if isinstance(value, (int, float)):
@@ -109,10 +114,17 @@ class NuclideRichPrinter:
                         text.append(f"{upper:.{precision}{fmt}}", style=self.theme['uncertainty'])
                         text.append("/-", style=self.theme['uncertainty'])
                         text.append(f"{lower:.{precision}{fmt}}", style=self.theme['uncertainty'])
+                elif uncertainty.get('type') == 'approximation':
+                    text = Text.assemble(Text("~", style=self.theme['uncertainty']), text)
+                elif uncertainty.get('type') == 'limit':
+                    if uncertainty.get('limitType') == 'upper':
+                        text = Text.assemble(Text("≤", style=self.theme['uncertainty']), text)
+                    elif uncertainty.get('limitType') == 'lower':
+                        text = Text.assemble(Text("≥", style=self.theme['uncertainty']), text)
+
             elif isinstance(uncertainty, (int, float)) and uncertainty > 0:
                 text.append(" ± ", style=self.theme['uncertainty'])
                 text.append(f"{uncertainty:.{precision}{fmt}}", style=self.theme['uncertainty'])
-        
         text.append(f" {unit}", style=self.theme['unit'])
         
         return text
@@ -141,9 +153,12 @@ class NuclideRichPrinter:
                 table.add_column(name, width=width, style=style)
         else:
             # 默认两列布局 (4:6比例)
-            table.add_column("属性", width=self.key_width, style=style)
-            table.add_column("数值", width=self.value_width, style=self.theme['value'])
-        
+                    # 设置列宽比例 (4:6)
+            key_width = int(self.table_width * 0.4)
+            value_width = int(self.table_width * 0.6)
+            table.add_column("属性", width=key_width, style=style)
+            table.add_column("数值", width=value_width, style=self.theme['value'])
+
         return table
     
     def print_nuclide_info(self, nuclide_data: NuclideProperties) -> None:
@@ -235,11 +250,10 @@ class NuclideRichPrinter:
             self.console.print(Align.center(Q_value_table))
         
 
-        
         # 激发态能量
         if getattr(self.config, 'show_decay_energies', True) if self.config else True:
             excitation_table = self._create_standard_table(
-                title=f"{A}{symbol} 激发态性质",
+                title=f"{A}{symbol} 激发态能量",
                 style=self.theme['excitation']
             )
             add_row_to_table(self, excitation_table, "第一激发态", 'firstExcitedStateEnergy')
@@ -275,7 +289,7 @@ class NuclideRichPrinter:
             title=f"{A}{symbol} 其他特性",
             style=self.theme['info']
         )
-                
+        # 四级形变
         if getattr(self.config, 'show_deformation', False) if self.config else False:
             add_row_to_table(self, table, "四极形变 β₂", 'quadrupoleDeformation')
         
@@ -283,86 +297,59 @@ class NuclideRichPrinter:
         if getattr(self.config, 'show_pairing_gap', True) if self.config else True:
             add_row_to_table(self, table, "配对能隙", 'pairingGap')
 
-        # 半衰期信息
-        if getattr(self.config, 'show_halflife', True) if self.config else True:
-            ground_state = nuclide_data.get('ground_state')
-            if ground_state and hasattr(ground_state, 'halflife') and ground_state.halflife:
-                hl = ground_state.halflife
-                if hasattr(hl, 'value'):
-                    if isinstance(hl.value, str):
-                        table.add_row(
-                            Text("半衰期", style="halflife"),
-                            Text(hl.value, style="value")
-                        )
-                    else:
-                        formatted = self.format_value(hl, style="halflife")
-                        if formatted:
-                            table.add_row(
-                                Text("半衰期", style="halflife"),
-                                formatted
-                            )
         # 丰度
         if getattr(self.config, 'show_abundance', True) if self.config else True:
             add_row_to_table(self, table, "自然丰度", 'abundance')
-
-        # 自旋宇称
-        if getattr(self.config, 'show_spin_parity', True) if self.config else True:
-            ground_state = nuclide_data.get('ground_state')
-            if ground_state and hasattr(ground_state, 'spin_parity') and ground_state.spin_parity:
-                table.add_row(
-                    Text("自旋宇称", style="key"),
-                    Text(str(ground_state.spin_parity), style="value")
-                )
                 
-        # 质量过剩
-        if getattr(self.config, 'show_mass_excess', True) if self.config else True:
-            ground_state = nuclide_data.get('ground_state')
-            if ground_state and hasattr(ground_state, 'mass_excess') and ground_state.mass_excess:
-                formatted = self.format_value(ground_state.mass_excess, "energy")
-                if formatted:
-                    energy_table.add_row(
-                        Text("质量过剩", style="key"),
-                        formatted
-                    )
         # 显示表格（居中）
         self.console.print(Align.center(table))
         
-        # 衰变模式 - 单独显示
-        if getattr(self.config, 'show_halflife', True) if self.config else True:
-            ground_state = nuclide_data.get('ground_state')
-            if ground_state and hasattr(ground_state, 'decay_modes_observed') and ground_state.decay_modes_observed:
-                # 定义衰变模式表格的列
-                decay_columns = [
-                    ("衰变类型", self.key_width, self.theme['decay']),
-                    ("分支比", self.value_width, self.theme['value'])
+        # 能级信息 - 单独显示
+        if getattr(self.config, 'show_energy_levels', True) if self.config else True:
+            energy_levels = nuclide_data.get('levels')
+            if energy_levels:                
+                # 定义能级表格的列
+                energy_columns = [
+                    ("能量 (MeV)", int(self.table_width*0.2), self.theme['value']),
+                    ("半衰期", int(self.table_width*0.25), self.theme['value']),
+                    ("自旋宇称", int(self.table_width*0.125), self.theme['value']),
+                    ("衰变模式", int(self.table_width*0.125), self.theme['value']),
+                    ("分支比(%)", int(self.table_width*0.3), self.theme['value']),
                 ]
-                
-                decay_table = self._create_standard_table(
-                    title="衰变模式",
+                # 创建能级表格
+                energy_table = self._create_standard_table(
+                    title=f"{A}{symbol} 能级信息",
                     show_header=True,
-                    style=self.theme['decay'],
-                    columns=decay_columns
+                    style=self.theme['level'],
+                    columns=energy_columns
                 )
-
-                precision = getattr(self.config, 'decimal_places', 3) if self.config else 3
-                for decay_mode in ground_state.decay_modes_observed:
-                    if hasattr(decay_mode, 'mode') and hasattr(decay_mode, 'value'):
-                        mode_name = str(decay_mode.mode)
-                        value_str = f"{decay_mode.value:.{precision}f}%"
-                        
-                        # 处理不确定度
-                        if hasattr(decay_mode, 'uncertainty') and decay_mode.uncertainty:
-                            uncertainty = decay_mode.uncertainty
-                            if isinstance(uncertainty, dict):
-                                unc_val = uncertainty.get('value', 0) if uncertainty else 0
-                                if unc_val and unc_val > 0:
-                                    value_str += f" ± {unc_val:.{precision}f}%"
-                            elif isinstance(uncertainty, (int, float)) and uncertainty > 0:
-                                value_str += f" ± {uncertainty:.{precision}f}%"
-                        
-                        decay_table.add_row(mode_name, value_str)
                 
-                self.console.print(Align.center(decay_table))
+                for level in energy_levels:
+                    decay_mode_list = level.decay_modes_observed
+                    if decay_mode_list:
+                        decay_mode_texts = []
+                        branch_ratio_texts = []
+                        
+                        for mode in decay_mode_list:
+                            decay_mode_texts.append(Text(str(mode.mode), style="bold"))
+                            branch_ratio_texts.append(self.format_value(mode))
+                        
+                        # 连接Text对象
+                        decay_mode_text = Text.assemble(*[item for text in decay_mode_texts for item in (text, Text("\n"))])[:-1]
+                        branch_ratio_text = Text.assemble(*[item for text in branch_ratio_texts for item in (text, Text("\n"))])[:-1]
+                    else:
+                        decay_mode_text = Text("未知", style="dim")
+                        branch_ratio_text = Text("未知", style="dim")
+                    
+                    energy_table.add_row(
+                        self.format_value(level.energy, "energy"),
+                        self.format_value(level.halflife),
+                        self.format_value(level.spin_parity, "spin_parity"),
+                        decay_mode_text,
+                        branch_ratio_text
+                    )
+                
+                self.console.print(Align.center(energy_table))
     
     def print_search_results(self, results: List[NuclideProperties], title: str = "查询结果") -> None:
         """打印搜索结果列表"""

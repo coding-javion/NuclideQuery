@@ -4,12 +4,12 @@ from collections import defaultdict
 import numpy as np
 from pathlib import Path
 from nuclide_data import (
-    DecayMode, 
+    DecayModeInfo,
+    HalfLifeInfo,
     ELEMENT_SYMBOLS,
     HALF_LIFE_UNITS,
     NuclideProperties,
     ValueWithUncertainty,
-    HalfLifeInfo,
     DecayModeInfo,
     LevelInfo,
     QueryConfig,
@@ -211,60 +211,6 @@ class NuclideDataLoader:
             print(f"加载数据文件失败: {e}")
             raise  # 重新抛出异常，以便更好地诊断问题
     
-    def _determine_decay_mode_from_nndc(self, nuclide_data: Dict) -> DecayMode:
-        """从NNDC数据格式确定衰变模式"""
-        # 检查是否有衰变信息
-        if 'levels' in nuclide_data and nuclide_data['levels']:
-            level = nuclide_data['levels'][0]  # 取基态
-            
-            # 检查半衰期，如果是稳定的
-            if 'halflife' in level:
-                halflife = level['halflife']
-                if isinstance(halflife, dict) and halflife.get('value') == "STABLE":
-                    return DecayMode.STABLE
-                    
-                # 检查衰变模式
-                if 'decayModes' in level and 'observed' in level['decayModes']:
-                    for decay in level['decayModes']['observed']:
-                        mode = decay.get('mode', '')
-                        if mode == 'B-':
-                            return DecayMode.BETA_MINUS
-                        elif mode == 'B+' or mode == 'EC':
-                            return DecayMode.BETA_PLUS
-                        elif mode == 'A':
-                            return DecayMode.ALPHA
-                        elif mode == 'N':
-                            return DecayMode.NEUTRON_EMISSION
-                        elif mode == 'P':
-                            return DecayMode.PROTON_EMISSION
-        
-        # 根据分离能判断衰变模式（备用方法）
-        neutron_sep = 0.0
-        proton_sep = 0.0
-        two_neutron_sep = 0.0
-        two_proton_sep = 0.0
-        
-        if 'neutronSeparationEnergy' in nuclide_data:
-            neutron_sep = nuclide_data['neutronSeparationEnergy'].get('value', 0.0) / 1000.0  # keV to MeV
-        if 'protonSeparationEnergy' in nuclide_data:
-            proton_sep = nuclide_data['protonSeparationEnergy'].get('value', 0.0) / 1000.0  # keV to MeV
-        if 'twoNeutronSeparationEnergy' in nuclide_data:
-            two_neutron_sep = nuclide_data['twoNeutronSeparationEnergy'].get('value', 0.0) / 1000.0  # keV to MeV
-        if 'twoProtonSeparationEnergy' in nuclide_data:
-            two_proton_sep = nuclide_data['twoProtonSeparationEnergy'].get('value', 0.0) / 1000.0  # keV to MeV
-        
-        if neutron_sep < 0:  # 中子分离能为负，可能发生中子发射
-            return DecayMode.NEUTRON_EMISSION
-        elif proton_sep < 0:  # 质子分离能为负，可能发生质子发射
-            return DecayMode.PROTON_EMISSION
-        elif two_neutron_sep < 0:  # 双中子分离能为负，可能发生双中子发射
-            return DecayMode.NEUTRON_EMISSION
-        elif two_proton_sep < 0:  # 双质子分离能为负，可能发生双质子发射
-            return DecayMode.PROTON_EMISSION
-        
-        # 默认返回未知
-        return DecayMode.UNKNOWN
-    
     def _parse_value_with_uncertainty(self, data) -> ValueWithUncertainty:
         """解析带不确定度的数值"""
         if not data or not isinstance(data, dict):
@@ -310,12 +256,12 @@ class NuclideDataLoader:
             hl_data = level_data['halflife']
             if isinstance(hl_data, dict):
                 if hl_data.get('value') == "STABLE":
-                    halflife = HalfLifeInfo("STABLE", "", 0.0)
+                    halflife = HalfLifeInfo("STABLE", None, "")
                 else:
                     value = hl_data.get('value', 0.0)
                     unit = hl_data.get('unit', 's')
                     uncertainty = hl_data.get('uncertainty', 0.0)
-                    halflife = HalfLifeInfo(value, unit, uncertainty)
+                    halflife = HalfLifeInfo(value, uncertainty, unit)
         
         # 解析衰变模式
         decay_modes_observed = []
@@ -390,29 +336,5 @@ class NuclideDataLoader:
     def get_isotope_chain(self, Z: int) -> List[NuclideProperties]:
         """获取特定元素的所有同位素数据"""
         return [data for (z, n), data in self.nuclide_data.items() if z == Z]
-    
-    def get_decay_path(self, Z: int, N: int) -> List[NuclideProperties]:
-        """获取核素的衰变路径"""
-        path = []
-        current = (Z, N)
-        
-        while current in self.nuclide_data:
-            data = self.nuclide_data[current]
-            path.append(data)
-            
-            # 根据衰变模式确定下一个核素
-            decay_mode = data.get('decay_mode')
-            if decay_mode == DecayMode.ALPHA:
-                current = (Z-2, N-2)
-            elif decay_mode == DecayMode.BETA_MINUS:
-                current = (Z+1, N-1)
-            elif decay_mode == DecayMode.BETA_PLUS:
-                current = (Z-1, N+1)
-            elif decay_mode == DecayMode.NEUTRON_EMISSION:
-                current = (Z, N-1)
-            elif decay_mode == DecayMode.PROTON_EMISSION:
-                current = (Z-1, N)
-            else:
-                break
         
         return path

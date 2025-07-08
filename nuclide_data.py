@@ -2,50 +2,34 @@ from typing import TypedDict, Dict, List, Optional, Union, Any
 from enum import Enum
 from dataclasses import dataclass
 
-class DecayMode(Enum):
-    """衰变模式枚举"""
-    STABLE = 'stable'
-    ALPHA = 'alpha'
-    BETA_MINUS = 'beta-'
-    BETA_PLUS = 'beta+'
-    ELECTRON_CAPTURE = 'EC'
-    SPONTANEOUS_FISSION = 'sf'
-    PROTON_EMISSION = 'p'
-    NEUTRON_EMISSION = 'n'
-    UNKNOWN = 'unknown'
-
 @dataclass
 class ValueWithUncertainty:
     """带不确定度的数值"""
-    value: Optional[float] = None
+    value: Union[float, str, None] = None
     uncertainty: Optional[float] = None
     unit: str = ""
 
     def __mul__(self, other: int) -> 'ValueWithUncertainty':
         """乘法运算"""
-        new_value = self.value * other if self.value is not None else None
-        new_uncertainty = self.uncertainty * other if self.uncertainty is not None else None
+        new_value = self.value * other if self.value is float else None
+        new_uncertainty = self.uncertainty * other if self.uncertainty is float else None
         return ValueWithUncertainty(new_value, new_uncertainty, self.unit)
 
     def __truediv__(self, other: int) -> 'ValueWithUncertainty':
         """除法运算"""
-        new_value = self.value / other if self.value is not None else None
-        new_uncertainty = self.uncertainty / other if self.uncertainty is not None else None
+        new_value = self.value / other if self.value is float else None
+        new_uncertainty = self.uncertainty / other if self.uncertainty is float else None
         return ValueWithUncertainty(new_value, new_uncertainty, self.unit)
 
 @dataclass
-class HalfLifeInfo:
-    """半衰期信息"""
-    value: Union[float, str]  # 数值或"STABLE"
-    unit: str = "s"
-    uncertainty: float = 0.0
+class DecayModeInfo(ValueWithUncertainty):
+    """衰变模式信息"""
+    mode: str = ""
 
 @dataclass
-class DecayModeInfo:
-    """衰变模式信息"""
-    mode: str
-    value: float  # 分支比(%)
-    uncertainty: float = 0.0
+class HalfLifeInfo(ValueWithUncertainty):
+    """半衰期信息"""
+    value = "STABLE"  # 可以是数值或"STABLE"
 
 @dataclass
 class LevelInfo:
@@ -53,7 +37,7 @@ class LevelInfo:
     energy: ValueWithUncertainty
     mass_excess: ValueWithUncertainty
     spin_parity: Optional[str] = None
-    halflife: Optional[HalfLifeInfo] = None
+    halflife: Optional[ValueWithUncertainty] = None
     decay_modes_observed: Optional[List[DecayModeInfo]] = None
     decay_modes_predicted: Optional[List[DecayModeInfo]] = None
 
@@ -179,21 +163,6 @@ def get_nuclide_symbol(Z: int, N: int, style: str = 'style1') -> str:
     
     # 使用最简单的 LaTeX 格式
     return f"{A}{symbol}"
-
-def decay_mode_to_color(decay_mode: DecayMode) -> str:
-    """衰变模式到颜色的映射"""
-    colors = {
-        DecayMode.STABLE: 'green',
-        DecayMode.ALPHA: 'red',
-        DecayMode.BETA_MINUS: 'blue',
-        DecayMode.BETA_PLUS: 'cyan',
-        DecayMode.ELECTRON_CAPTURE: 'cyan',
-        DecayMode.SPONTANEOUS_FISSION: 'purple',
-        DecayMode.PROTON_EMISSION: 'orange',
-        DecayMode.NEUTRON_EMISSION: 'yellow',
-        DecayMode.UNKNOWN: 'gray'
-    }
-    return colors.get(decay_mode, 'gray')
 
 # 查询配置相关
 @dataclass
