@@ -21,11 +21,11 @@ from rich.align import Align
 from rich.measure import Measurement
 
 from nuclide_data import NuclideProperties
-
+from config import QueryConfig
 class NuclideRichPrinter:
     """核素数据的美观输出类"""
     
-    def __init__(self, query_config=None):
+    def __init__(self, query_config: QueryConfig = QueryConfig()):
         """
         初始化输出器
         
@@ -50,7 +50,7 @@ class NuclideRichPrinter:
             'success': 'bold green',
             'info': 'bold blue',
             'highlight': 'bold magenta',
-            'border': 'dim blue',
+            'border': 'bold blue',
             'element': 'bold cyan',
             'energy': 'bold yellow',
             'separation': 'bold green',
@@ -134,7 +134,7 @@ class NuclideRichPrinter:
                     else:
                         unc_fmt = self.format_float(unc_val, 10)
                     if unc_val > 0:
-                        text.append(" ± ", style=self.theme['uncertainty'])
+                        text.append(" ±", style=self.theme['uncertainty'])
                         text.append(f"{unc_val:{unc_fmt}}", style=self.theme['uncertainty'])
                 elif uncertainty.get('type') == 'asymmetric':
                     upper = uncertainty.get('upperLimit', 0)
@@ -163,7 +163,7 @@ class NuclideRichPrinter:
                     uncertainty_fmt = '10.3e'
                 else:
                     uncertainty_fmt = self.format_float(uncertainty, 10)
-                text.append(" ± ", style=self.theme['uncertainty'])
+                text.append(" ±", style=self.theme['uncertainty'])
                 text.append(f"{uncertainty:{uncertainty_fmt}}", style=self.theme['uncertainty'])
         text.append(f" {unit}", style=self.theme['unit'])
         
@@ -228,124 +228,157 @@ class NuclideRichPrinter:
             data = nuclide_data.get(data_key)
             if data:
                 table.add_row(Text(key), self.format_value(data))
+        
+        if not self.config.show_minimal_info:
+            self.console.print(Align.center(f"{A}{symbol} (Z={Z}, N={N})"))
 
+        # 最小信息
+        if self.config.show_minimal_info:
+            columns = [
+            ("核素", int(self.table_width * 0.2), self.theme['element']),
+            ("结合能", int(self.table_width * 0.25), self.theme['energy']),
+            ("半衰期", int(self.table_width * 0.2), self.theme['level']),
+            ("衰变模式", int(self.table_width * 0.175), self.theme['level']),
+            ("自旋宇称", int(self.table_width * 0.175), self.theme['level'])
+            ]
+            
+            minimal_table = Table(
+                show_header=True,
+                box=ROUNDED,
+                border_style=self.theme['border'],
+                padding=(0, 1),
+                width=self.table_width
+            )
+            
+            for name, width, style in columns:
+                minimal_table.add_column(name, width=width, style=style)
+                
+            decay_mode_list = nuclide_data.get('ground_state').decay_modes_observed
+            decay_mode_texts = []
+            for mode in decay_mode_list:
+                decay_mode_texts.append(
+                    Text(f"{mode.mode}", style=self.theme['level'])
+                )
+            decay_mode_text = Text.assemble(*[item for text in decay_mode_texts for item in (text, Text("/"))])[:-1]
+            
+            minimal_table.add_row(Text(f"{A}{symbol}(Z={Z},N={N})", style=self.theme['element']),
+                                  self.format_value(nuclide_data.get('bindingEnergy'), style=self.theme['energy']),
+                                  self.format_value(nuclide_data.get('ground_state', {}).halflife, style=self.theme['level']),
+                                    self.format_value(decay_mode_text, style=self.theme['level']),
+                                  self.format_value(nuclide_data.get('ground_state', {}).spin_parity, style=self.theme['level']))
+            
+            self.console.print(Align.center(minimal_table))
+            
+        
         # 能量特性
-        title = f"{A}{symbol} (Z={Z}, N={N})"
-        energy_table = self._create_standard_table(title, style=self.theme['energy'])
+        if self.config.show_energy_info:
+            title = f"{A}{symbol} 能量特性"
+            energy_table = self._create_standard_table(title, style=self.theme['energy'])
 
-        # 结合能
-        if getattr(self.config, 'show_binding_energy', True) if self.config else True:
-            add_row_to_table(self, energy_table, "结合能", 'bindingEnergy')
-                    
-        # 比结合能
-        if getattr(self.config, 'show_binding_energy_per_nucleon', True) if self.config else True:
-            add_row_to_table(self, energy_table, "比结合能", 'bindingEnergyPerNucleon')
-                    
-        # 显示表格（居中）
-        self.console.print(Align.center(energy_table))
+            if self.config.show_binding_energy:
+                add_row_to_table(self, energy_table, "结合能", 'bindingEnergy')
+            if self.config.show_binding_energy_per_nucleon:
+                add_row_to_table(self, energy_table, "比结合能", 'bindingEnergyPerNucleon')
+
+            self.console.print(Align.center(energy_table))
         
         # 分离能
-        separation_table = self._create_standard_table(
-            title=f"{A}{symbol} 分离能",
-            style=self.theme['separation']
-        )
-        
-        # 中子分离能
-        if getattr(self.config, 'show_neutron_separation', True) if self.config else True:
-            add_row_to_table(self, separation_table, "中子分离能", 'neutronSeparationEnergy')
-        
-        # 质子分离能
-        if getattr(self.config, 'show_proton_separation', True) if self.config else True:
-            add_row_to_table(self, separation_table, "质子分离能", 'protonSeparationEnergy')
-        
-        # 双中子分离能
-        if getattr(self.config, 'show_two_neutron_separation', True) if self.config else True:
-            add_row_to_table(self, separation_table, "双中子分离能", 'twoNeutronSeparationEnergy')
-        
-        # 双质子分离能
-        if getattr(self.config, 'show_two_proton_separation', True) if self.config else True:
-            add_row_to_table(self, separation_table, "双质子分离能", 'twoProtonSeparationEnergy')
-        
-        # 显示表格（居中）
-        self.console.print(Align.center(separation_table))
+        if self.config.show_separation_info:
+            
+            separation_table = self._create_standard_table(
+                title=f"{A}{symbol} 分离能",
+                style=self.theme['separation']
+            )
+
+            if self.config.show_neutron_separation:
+                add_row_to_table(self, separation_table, "中子分离能", 'neutronSeparationEnergy')
+            if self.config.show_proton_separation:
+                add_row_to_table(self, separation_table, "质子分离能", 'protonSeparationEnergy')
+            if self.config.show_two_neutron_separation:
+                add_row_to_table(self, separation_table, "双中子分离能", 'twoNeutronSeparationEnergy')
+            if self.config.show_two_proton_separation:
+                add_row_to_table(self, separation_table, "双质子分离能", 'twoProtonSeparationEnergy')
+            
+            self.console.print(Align.center(separation_table))
         
         # Q值特性
-        if getattr(self.config, 'show_Q_values', True) if self.config else True:
+        if self.config.show_Q_values:
             Q_value_table = self._create_standard_table(
                 title=f"{A}{symbol} Q值",
                 style=self.theme['Q_value']
             )
-            add_row_to_table(self, Q_value_table, "α衰变Q值", 'alpha')
-            add_row_to_table(self, Q_value_table, "α衰变Q值变化量", 'deltaAlpha')
-            add_row_to_table(self, Q_value_table, "β-衰变Q值", 'betaMinus')
-            add_row_to_table(self, Q_value_table, "电子捕获Q值", 'electronCapture')
-            add_row_to_table(self, Q_value_table, "正电子发射Q值", 'positronEmission')
-            add_row_to_table(self, Q_value_table, "β-单中子发射Q值", 'betaMinusOneNeutronEmission')
-            add_row_to_table(self, Q_value_table, "β-双中子发射Q值", 'betaMinusTwoNeutronEmission')
-            add_row_to_table(self, Q_value_table, "电子捕获单中子发射Q值", 'electronCaptureOneProtonEmission')
-            add_row_to_table(self, Q_value_table, "双β-衰变Q值", 'doubleBetaMinus')
-            add_row_to_table(self, Q_value_table, "双电子捕获Q值", 'doubleElectronCapture')
+            if self.config.show_alpha_separation:
+                add_row_to_table(self, Q_value_table, "α衰变Q值", 'alphaSeparationEnergy')
+            if self.config.show_delta_alpha:
+                add_row_to_table(self, Q_value_table, "α衰变Q值变化量", 'deltaAlpha')
+            if self.config.show_beta_minus:
+                add_row_to_table(self, Q_value_table, "β-衰变Q值", 'betaMinus')
+            if self.config.show_electron_capture:
+                add_row_to_table(self, Q_value_table, "电子捕获Q值", 'electronCapture')
+            if self.config.show_positron_emission:
+                add_row_to_table(self, Q_value_table, "正电子发射Q值", 'positronEmission')
+            if self.config.show_beta_minus_one_neutron_emission:
+                add_row_to_table(self, Q_value_table, "β-单中子发射Q值", 'betaMinusOneNeutronEmission')
+            if self.config.show_beta_minus_two_neutron_emission:
+                add_row_to_table(self, Q_value_table, "β-双中子发射Q值", 'betaMinusTwoNeutronEmission')
+            if self.config.show_electron_capture_one_proton_emission:
+                add_row_to_table(self, Q_value_table, "电子捕获单质子发射Q值", 'electronCaptureOneProtonEmission')
+            if self.config.show_double_beta_minus:
+                add_row_to_table(self, Q_value_table, "双β-衰变Q值", 'doubleBetaMinus')
+            if self.config.show_double_electron_capture:
+                add_row_to_table(self, Q_value_table, "双电子捕获Q值", 'doubleElectronCapture')
             
-            # 显示Q值表格（居中）
             self.console.print(Align.center(Q_value_table))
         
 
         # 激发态能量
-        if getattr(self.config, 'show_decay_energies', True) if self.config else True:
+        if self.config.show_excitation_energy:
             excitation_table = self._create_standard_table(
                 title=f"{A}{symbol} 激发态能量",
                 style=self.theme['excitation']
             )
-            add_row_to_table(self, excitation_table, "第一激发态", 'firstExcitedStateEnergy')
-            add_row_to_table(self, excitation_table, "第一2+态", 'firstTwoPlusEnergy')
-            add_row_to_table(self, excitation_table, "第一4+态", 'firstFourPlusEnergy')
-            add_row_to_table(self, excitation_table, "第一4+态/第一2+态", 'firstFourPlusOverFirstTwoPlusEnergy')
-            add_row_to_table(self, excitation_table, "第一3-态", 'firstThreeMinusEnergy')
+            if self.config.show_first_excitation_energy:
+                add_row_to_table(self, excitation_table, "第一激发能", 'firstExcitedEnergy')
+            if self.config.show_first_2plus_energy:
+                add_row_to_table(self, excitation_table, "第一2+态", 'firstTwoPlusEnergy')
+            if self.config.show_first_4plus_energy:
+                add_row_to_table(self, excitation_table, "第一4+态", 'firstFourPlusEnergy')
+            if self.config.show_first_4plus_divided_by_2plus:
+                add_row_to_table(self, excitation_table, "第一4+态/第一2+态", 'firstFourPlusOverFirstTwoPlusEnergy')
+            if self.config.show_first_3minus_energy:
+                add_row_to_table(self, excitation_table, "第一3-态", 'firstThreeMinusEnergy')
 
             # 显示表格（居中）
             self.console.print(Align.center(excitation_table))
     
         # 裂变产额
-        if getattr(self.config, 'show_fission_yield', True) if self.config else True:
+        if self.config.show_fission_yields:
             fission_yield_table = self._create_standard_table(
                 title=f"{A}{symbol} 裂变产额",
                 style=self.theme['fission_yield']
             )
-            add_row_to_table(self, fission_yield_table, "U235独立产额", 'FY235U')
-            add_row_to_table(self, fission_yield_table, "U238独立产额", 'FY238U')
-            add_row_to_table(self, fission_yield_table, "Pu239独立产额", 'FY239Pu')
-            add_row_to_table(self, fission_yield_table, "Cf252独立产额", 'FY252Cf')
-            add_row_to_table(self, fission_yield_table, "U235累积产额", 'cFY235U')
-            add_row_to_table(self, fission_yield_table, "U238累积产额", 'cFY238U')
-            add_row_to_table(self, fission_yield_table, "Pu239累积产额", 'cFY239Pu')
-            add_row_to_table(self, fission_yield_table, "Cf252累积产额", 'cFY252Cf')
+            if self.config.show_u235_ify:
+                add_row_to_table(self, fission_yield_table, "U235独立产额", 'FY235U')
+            if self.config.show_u238_ify:
+                add_row_to_table(self, fission_yield_table, "U238独立产额", 'FY238U')
+            if self.config.show_pu239_ify:
+                add_row_to_table(self, fission_yield_table, "Pu239独立产额", 'FY239Pu')
+            if self.config.show_cf252_ify:
+                add_row_to_table(self, fission_yield_table, "Cf252独立产额", 'FY252Cf')
+            if self.config.show_u235_cfy:
+                add_row_to_table(self, fission_yield_table, "U235累积产额", 'cFY235U')
+            if self.config.show_u238_cfy:
+                add_row_to_table(self, fission_yield_table, "U238累积产额", 'cFY238U')
+            if self.config.show_pu239_cfy:
+                add_row_to_table(self, fission_yield_table, "Pu239累积产额", 'cFY239Pu')
+            if self.config.show_cf252_cfy:
+                add_row_to_table(self, fission_yield_table, "Cf252累积产额", 'cFY252Cf')
             
             # 显示表格（居中）
             self.console.print(Align.center(fission_yield_table))
         
-        # 其他特性
-        
-        table = self._create_standard_table(
-            title=f"{A}{symbol} 其他特性",
-            style=self.theme['info']
-        )
-        # 四级形变
-        if getattr(self.config, 'show_deformation', False) if self.config else False:
-            add_row_to_table(self, table, "四极形变 β₂", 'quadrupoleDeformation')
-        
-        # 配对能隙
-        if getattr(self.config, 'show_pairing_gap', True) if self.config else True:
-            add_row_to_table(self, table, "配对能隙", 'pairingGap')
-
-        # 丰度
-        if getattr(self.config, 'show_abundance', True) if self.config else True:
-            add_row_to_table(self, table, "自然丰度", 'abundance')
-                
-        # 显示表格（居中）
-        self.console.print(Align.center(table))
-        
         # 能级信息 - 单独显示
-        if getattr(self.config, 'show_energy_levels', True) if self.config else True:
+        if self.config.show_levels:
             energy_levels = nuclide_data.get('levels')
             if energy_levels:                
                 # 定义能级表格的列

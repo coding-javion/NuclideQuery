@@ -13,7 +13,7 @@ from pathlib import Path
 from nuclide_data import ELEMENT_SYMBOLS, NuclideProperties
 from database_loader import NuclideDataLoader
 from rich_output import NuclideRichPrinter
-import config
+from config import QueryConfig, DATA_FILE_PATH
 
 
 def parse_nuclide_string(nuclide_str: str) -> tuple:
@@ -57,7 +57,7 @@ def parse_nuclide_string(nuclide_str: str) -> tuple:
 class NuclideQuery:
     """核素查询类"""
     
-    def __init__(self, data_file: Optional[str] = None, query_config: str = "basic"):
+    def __init__(self, data_file: Optional[str] = None, query_config: QueryConfig = QueryConfig()):
         """
         初始化查询器
         
@@ -66,7 +66,7 @@ class NuclideQuery:
             query_config: 查询配置名称
         """
         if data_file is None:
-            data_file = config.DATA_FILE_PATH
+            data_file = DATA_FILE_PATH
         self.data_loader = NuclideDataLoader(data_file, query_config)
         self.rich_printer = NuclideRichPrinter(query_config)
         
@@ -156,8 +156,8 @@ def main():
     parser.add_argument('input1', nargs='?', help='质子数或元素符号+质量数 (如: 26 或 fe56)')
     parser.add_argument('input2', nargs='?', help='中子数 (仅当第一个参数为质子数时需要)')
     parser.add_argument('-m', '--mode', type=str, default='basic', 
-                       choices=['basic', 'detailed'],
-                       help='查询模式 (basic/detailed)')
+                       choices=['basic', 'detailed', 'minimal'],
+                       help='查询模式 (basic/detailed/minimal)')
     
     args = parser.parse_args()
     
@@ -167,7 +167,8 @@ def main():
     
     # 初始化查询器
     try:
-        query_tool = NuclideQuery(query_config=args.mode)
+        query_config = QueryConfig(mode=args.mode)
+        query_tool = NuclideQuery(query_config=query_config)
         query_tool.rich_printer.print_header("核素实验数据查询工具")
     except Exception as e:
         # 创建临时printer来显示错误

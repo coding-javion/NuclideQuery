@@ -1,72 +1,102 @@
 # 核素查询工具配置文件
 # Nuclide Query Tool Configuration
 
+
+from dataclasses import dataclass
+
 # ====================================================
 # 查询配置定义
 # ====================================================
 
-# 基础查询配置 - 包含基态宇称的简化显示
-BASIC_QUERY_CONFIG = {
-    "show_basic_info": True,
-    "show_element_symbol": True,
-    "show_mass_number": True,
-    "show_binding_energy": True,
-    "show_binding_energy_per_nucleon": True,
-    "show_mass_excess": False,
-    "show_neutron_separation": True,
-    "show_proton_separation": True,
-    "show_two_neutron_separation": True,
-    "show_two_proton_separation": True,
-    "show_alpha_separation": False,
-    "show_decay_mode": False,
-    "show_halflife": True,
-    "show_decay_energies": False,
-    "show_thermal_neutron_capture": False,
-    "show_spin_parity": True,  # 显示基态自旋宇称
-    "show_pairing_gap": False,
-    "show_shell_correction": False,
-    "show_deformation": True,  # 启用形变显示
-    "show_abundance": False,
-    "show_uncertainties": False,
-    "energy_unit": "MeV",
-    "decimal_places": 2
-}
+# 查询配置相关
+@dataclass
+class QueryConfig:
+    """查询配置类"""
+    # 块信息显示
+    show_minimal_info: bool = False
+    show_energy_info : bool = True
+    show_separation_info: bool = True
+    show_Q_values: bool = False
+    show_excitation_energy: bool = False
+    show_fission_yields: bool = False
+    show_levels: bool = True
+    
+    # 能量信息显示
+    show_binding_energy: bool = True
+    show_binding_energy_per_nucleon: bool = True
+    show_mass_excess: bool = False
+    
+    # 分离能显示
+    show_neutron_separation: bool = True
+    show_proton_separation: bool = True
+    show_two_neutron_separation: bool = True
+    show_two_proton_separation: bool = True
 
-# 详细查询配置
-DETAILED_QUERY_CONFIG = {
-    "show_basic_info": True,
-    "show_element_symbol": True,
-    "show_mass_number": True,
-    "show_binding_energy": True,
-    "show_binding_energy_per_nucleon": True,
-    "show_mass_excess": True,
-    "show_neutron_separation": True,
-    "show_proton_separation": True,
-    "show_two_neutron_separation": True,
-    "show_two_proton_separation": True,
-    "show_alpha_separation": True,
-    "show_decay_mode": True,
-    "show_halflife": True,
-    "show_decay_energies": True,
-    "show_thermal_neutron_capture": True,
-    "show_spin_parity": True,
-    "show_pairing_gap": True,
-    "show_shell_correction": True,
-    "show_deformation": True,
-    "show_abundance": True,
-    "show_uncertainties": True,
-    "energy_unit": "MeV",
-    "decimal_places": 6
-}
+    # Q值信息显示
+    show_alpha_separation: bool = True
+    show_delta_alpha: bool = True
+    show_beta_minus: bool = True
+    show_electron_capture: bool = True
+    show_positron_emission: bool = True
+    show_beta_minus_one_neutron_emission: bool = True
+    show_beta_minus_two_neutron_emission: bool = True
+    show_electron_capture_one_proton_emission: bool = True
+    show_double_beta_minus: bool = True
+    show_double_electron_capture: bool = True
 
-# 默认查询模式
-DEFAULT_QUERY_MODE = "basic"
+    # 激发态能量信息
+    show_first_excitation_energy: bool = True
+    show_first_2plus_energy: bool = True
+    show_first_4plus_energy: bool = True
+    show_first_4plus_divided_by_2plus: bool = True
+    show_first_3minus_energy: bool = True
+    
+    # 裂变产额信息
+    
+    show_u235_ify: bool = True
+    show_u238_ify: bool = True
+    show_pu239_ify: bool = True
+    show_cf252_ify: bool = True
+    show_u235_cfy: bool = True
+    show_u238_cfy: bool = True
+    show_pu239_cfy: bool = True
+    show_cf252_cfy: bool = True
 
-# 查询配置映射
-QUERY_CONFIGS = {
-    "basic": BASIC_QUERY_CONFIG,
-    "detailed": DETAILED_QUERY_CONFIG
-}
+    # 核素能级信息
+    show_levels_energy: bool = True
+    show_levels_halflife: bool = True
+    show_levels_spin_parity: bool = True
+    show_levels_decay_modes: bool = True
+    show_levels_branching_ratios: bool = True
+    
+    # 显示格式
+    show_uncertainties: bool = False
+    energy_unit: str = "MeV"  # "MeV" 或 "keV"
+    decimal_places: int = 3
+
+    # 预定义的查询配置
+    def __init__(self, mode: str = "basic"):
+        if mode == "basic":
+            pass
+        elif mode == "detailed":
+            self.show_energy_info = True
+            self.show_separation_info = True
+            self.show_Q_values = True
+            self.show_excitation_states_energy = True
+            self.show_fission_yields = True
+            self.show_levels = True
+            self.show_uncertainties = True
+        elif mode == "minimal":
+            self.show_minimal_info = True
+            self.show_energy_info = False
+            self.show_separation_info = False
+            self.show_Q_values = False
+            self.show_excitation_states_energy = False
+            self.show_fission_yields = False
+            self.show_levels = False
+            self.show_uncertainties = False
+        else:
+            print(f"未知查询模式: {mode}, 使用默认配置")
 
 # ====================================================
 # 批量查询配置
@@ -84,9 +114,6 @@ BATCH_QUERY_CSV_FIELDS = [
 # ====================================================
 # 显示格式配置
 # ====================================================
-
-# 能量单位
-ENERGY_UNIT = "MeV"
 
 # 数据文件路径
 DATA_FILE_PATH = "nndc_nudat_data_export.json"

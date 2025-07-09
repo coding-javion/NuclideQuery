@@ -16,7 +16,7 @@ def example_single_query():
     print("=" * 60)
     
     # 初始化查询器 - 使用详细配置
-    query_tool = NuclideQuery(query_config="detailed")
+    query_tool = NuclideQuery("detailed")
     
     # 查询一些常见核素
     test_nuclides = [

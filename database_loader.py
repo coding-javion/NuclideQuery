@@ -11,16 +11,14 @@ from nuclide_data import (
     NuclideProperties,
     ValueWithUncertainty,
     DecayModeInfo,
-    LevelInfo,
-    QueryConfig,
-    load_query_config
+    LevelInfo
 )
-import config
+from config import QueryConfig, DATA_FILE_PATH
 
 class NuclideDataLoader:
     """从本地JSON文件加载核素数据的类"""
     
-    def __init__(self, data_file: Optional[str] = None, query_config: str = "basic"):
+    def __init__(self, data_file: Optional[str] = None, query_config: QueryConfig = QueryConfig()):
         """
         初始化数据加载器
         
@@ -29,10 +27,10 @@ class NuclideDataLoader:
             query_config: 查询配置名称
         """
         if data_file is None:
-            data_file = config.DATA_FILE_PATH
+            data_file = DATA_FILE_PATH
         
         self.data_file = Path(data_file)
-        self.query_config = load_query_config(query_config)
+        self.query_config = query_config
         
         # 核素数据存储结构 - 使用 NuclideProperties
         self.nuclide_data: Dict[tuple, NuclideProperties] = {}
@@ -336,5 +334,3 @@ class NuclideDataLoader:
     def get_isotope_chain(self, Z: int) -> List[NuclideProperties]:
         """获取特定元素的所有同位素数据"""
         return [data for (z, n), data in self.nuclide_data.items() if z == Z]
-        
-        return path
