@@ -31,17 +31,11 @@ pip install -U pip
 pip install "git+https://github.com/coding-javion/NuclideQuery.git"
 ```
 
-安装完成后，`nuclide_query` 命令和 `nuclide` 模块即可在任意位置使用。
+安装完成后，`nucquery` 命令和 `nuclide` 模块即可在任意位置使用。
 
 ## 🚀 快速开始
 
-### 安装依赖
-
-```bash
-pip install rich matplotlib  # matplotlib 为可选
-```
-
-### Python API 使用（推荐）
+### Python API 使用
 
 ```python
 from nucquery import Nuclide, NuclideQuery
