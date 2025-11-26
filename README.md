@@ -70,18 +70,18 @@ for nuc in ca_isotopes:
 
 ```bash
 # 查询实验数据
-python nuclide_query.py fe56
-python nuclide_query.py 26 30
+nucquery fe56
+nucquery 26 30
 
 # 查询理论数据
-python nuclide_query.py -s SKMS fe56
-python nuclide_query.py -s UNEDF1 pb208
+nucquery -s SKMS fe56
+nucquery -s UNEDF1 pb208
 
 # 列出所有可用数据源
-python nuclide_query.py --list-sources
+nucquery --list-sources
 
 # 批量查询同位素
-python nuclide_query.py -s SKMS -b isotopes 20
+nucquery -s SKMS -b isotopes 20
 ```
 
 ## 📊 可用数据源
