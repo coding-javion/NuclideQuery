@@ -12,7 +12,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'nucquery=nucquery.nuclide_query:main',
+            'nucquery=nucquery.cli:main',
         ],
     },
     author="Your Name",
