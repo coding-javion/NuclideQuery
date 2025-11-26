@@ -135,7 +135,7 @@ nuc.decay_modes # 衰变模式列表
 
 ```python
 import matplotlib.pyplot as plt
-from nuclide import get_isotope_chain
+from nucquery import NuclideQuery
 
 # 比较实验与理论的比结合能
 sources = ['experiment', 'SKMS', 'UNEDF1']
@@ -143,7 +143,10 @@ colors = ['black', 'red', 'blue']
 
 plt.figure(figsize=(10, 6))
 for src, color in zip(sources, colors):
-    isotopes = get_isotope_chain(50, (50, 90), source=src)
+    query = NuclideQuery(source=src)
+    # 查询 Z=50 (锡) 的同位素链，中子数范围 50-90
+    isotopes = query.query_isotopes(50, N_min=50, N_max=90)
+    
     A = [n.A for n in isotopes if n.BE_A]
     BE_A = [n.BE_A for n in isotopes if n.BE_A]
     plt.plot(A, BE_A, 'o-', label=src, color=color, markersize=3)
@@ -161,15 +164,15 @@ NuclideQuery/
 ├── README.md                     # 使用说明（本文件）
 ├── setup.py                      # 打包与安装配置
 ├── example/                      # 使用示例脚本
-│   ├── example_plot_binding_energy.py
 │   └── examples.py
 ├── nucquery/
 │   ├── __init__.py
+│   ├── cli.py                    # 命令行入口
 │   ├── config.py                 # 全局配置与常量
 │   ├── data_source.py            # 数据源抽象层及管理器
 │   ├── nuclide.py                # Nuclide API
 │   ├── nuclide_data.py           # 数据结构定义
-│   ├── nuclide_query.py          # 命令行入口
+│   ├── nuclide_query.py          # 核心查询类
 │   ├── rich_output.py            # Rich 终端展示
 │   └── data/                     # 原始实验/理论数据文件
 │       ├── nndc_nudat_data_export.json
