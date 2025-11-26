@@ -1,298 +1,228 @@
-# 核素查询工具 v1.0.0-beta
+# 核素数据查询工具
 
-基于NNDC NUDAT数据库的核素实验数据查询工具包，支持查询结合能、分离能、半衰期、自旋宇称等核物理参数。
+基于 NNDC NuDat 数据库的核素数据查询工具，同时支持多种 DFT 理论计算数据。
 
-## 🚀 特性
+## ✨ 功能特性
 
-- **灵活输入**：支持质子数+中子数或元素符号+质量数两种格式
-- **完整数据**：提供结合能、单/双中子分离能、单/双质子分离能、半衰期、自旋宇称
-- **多种模式**：基础模式和详细模式，满足不同需求
-- **美观输出**：全新设计的格式化输出，清晰易读
-- **准确数据**：基于NNDC官方数据，包含不确定度信息
-- **易于使用**：简洁的命令行接口和详细的数据展示
-- **类型安全**：完整的类型注解，支持现代Python开发环境
+- **多数据源支持**：实验数据（NNDC）+ 理论数据（SKMS, UNEDF0, UNEDF1, SLY4, SKP, SV-MIN）
+- **统一的 API**：通过 `Nuclide` 类提供简洁一致的接口
+- **灵活的输入**：支持 `(Z, N)` 或元素符号（如 `Fe56`）
+- **丰富的数据**：结合能、分离能、Q值、激发态、半衰期、衰变模式等
 
-## 📁 项目结构
+## 📁 架构设计
 
-```bash
-NuclideQuery/
-├── batch_nuclide_query.py       # 批量查询工具
-├── config.py                    # 配置文件
-├── database_loader.py           # 数据库加载器（核心模块）
-├── examples.py                  # 使用示例演示
-├── nndc_nudat_data_export.json  # NNDC数据文件
-├── nuclide_data.py              # 数据结构定义
-├── nuclide_query.py             # 单个查询工具
-├── README.md
+```text
+┌─────────────────────────────────────────────────────────┐
+│                    用户接口层                            │
+├─────────────────────────────────────────────────────────┤
+│  nuclide.py          - Nuclide 类，简洁的属性访问       │
+│  nuclide_query.py    - 核心查询服务与 CLI 入口          │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────┐
+│                    数据源抽象层                          │
+├─────────────────────────────────────────────────────────┤
+│  data_source.py                                         │
+│    ├── DataSource (抽象基类)                            │
+│    ├── ExperimentalDataSource (NNDC 实验数据)           │
+│    ├── TheoreticalDataSource (DFT 理论数据)             │
+│    └── DataSourceManager (数据源管理器)                 │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+┌───────────────────────────▼─────────────────────────────┐
+│                    数据定义层                            │
+├─────────────────────────────────────────────────────────┤
+│  nuclide_data.py     - 数据结构定义                     │
+│    ├── ValueWithUncertainty                             │
+│    ├── NuclideProperties                                │
+│    └── LevelInfo, DecayModeInfo                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## 🔧 快速开始
+## 📦 安装
 
-### 1. 基本查询
+> 建议使用 Python 3.9+，并在虚拟环境中操作以避免与系统依赖冲突。
+
+### 方式一：克隆仓库后本地安装
+
+```bash
+git clone https://github.com/coding-javion/NuclideQuery.git
+cd NuclideQuery
+python -m venv .venv  # 可选 创建虚拟环境
+.venv\Scripts\activate  # Windows激活虚拟环境
+pip install -U pip # 可选 升级pip到最新版本
+pip install -e .  # 以可编辑模式安装当前目录的包 或 pip install . 直接安装（非可编辑模式）
+```
+
+### 方式二：直接通过 pip 从 Git 安装（无需克隆）
+
+```bash
+pip install -U pip
+pip install "git+https://github.com/coding-javion/NuclideQuery.git"
+```
+
+安装完成后，`nuclide_query` 命令和 `nuclide` 模块即可在任意位置使用。
+
+## 🚀 快速开始
+
+### 安装依赖
+
+```bash
+pip install rich matplotlib  # matplotlib 为可选
+```
+
+### Python API 使用（推荐）
 
 ```python
-from database_loader import NuclideDataLoader
+from nucquery import Nuclide, NuclideQuery
 
-# 创建数据加载器
-loader = NuclideDataLoader()
+# 1. 基础查询：查询实验数据（默认）
+fe56 = Nuclide(26, 30)
+print(f"BE = {fe56.BE:.3f} MeV")      # 结合能
+print(f"BE/A = {fe56.BE_A:.3f} MeV")  # 比结合能
+print(f"Sn = {fe56.Sn:.3f} MeV")      # 中子分离能
 
-# 查询核素数据
-data = loader.get_nuclide_data(Z=26, N=30)  # Fe-56
-output = loader.format_nuclide_output(data)
-print(output)
+# 2. 查询理论数据
+fe56_skms = Nuclide(26, 30, source='SKMS')
+print(f"SKMS: BE = {fe56_skms.BE:.3f} MeV")
+
+# 3. 从元素符号创建
+pb208 = Nuclide.from_symbol("Pb208", source='UNEDF1')
+
+# 4. 批量查询：获取同位素链
+query = NuclideQuery(source='SKMS')
+ca_isotopes = query.query_isotopes(20, N_min=20, N_max=30)
+for nuc in ca_isotopes:
+    print(f"{nuc.name}: BE/A = {nuc.BE_A:.3f} MeV")
 ```
 
-### 2. 命令行查询（推荐）
+### 命令行使用
 
 ```bash
-# 查询铁-56
+# 查询实验数据
 python nuclide_query.py fe56
+python nuclide_query.py 26 30
+
+# 查询理论数据
+python nuclide_query.py -s SKMS fe56
+python nuclide_query.py -s UNEDF1 pb208
+
+# 列出所有可用数据源
+python nuclide_query.py --list-sources
+
+# 批量查询同位素
+python nuclide_query.py -s SKMS -b isotopes 20
 ```
 
-### 3. 基础模式输出示例
+## 📊 可用数据源
 
-```bash
-核素实验数据查询工具
-==================================================
-查询核素: 56Fe (Z=26, N=30)
-查询模式: basic
-╔═══ 56Fe (Z=26, N=30) ═══
-║  半衰期: STABLE | 自旋宇称: 0+
-╠─ 能量特性
-║  结合能: 8.79 MeV | 比结合能: 0.16 MeV/核子
-╠─ 分离能
-║  中子分离能:   11.20 MeV | 质子分离能:   10.18 MeV
-║  双中子分离能: 20.50 MeV | 双质子分离能: 18.25 MeV
-╠─ 其他特性
-║  四极形变 β₂     : 0.25
-```
+| 数据源 | 类型 | 描述 | 核素数 |
+|--------|------|------|--------|
+| `experiment` | 实验 | NNDC NuDat 数据库 | ~3600 |
+| `SKMS` | 理论 | SkM* 能量密度泛函 | ~8000 |
+| `UNEDF0` | 理论 | UNEDF0 能量密度泛函 | ~8000 |
+| `UNEDF1` | 理论 | UNEDF1 能量密度泛函 | ~8000 |
+| `SLY4` | 理论 | Skyrme SLy4 泛函 | ~8000 |
+| `SKP` | 理论 | Skyrme SKP 泛函 | ~8000 |
+| `SV-MIN` | 理论 | SV-min 泛函 | ~8000 |
 
-## 📊 高级用法
-
-### 1. 详细模式查询（包含不确定度）
+## 🔧 Nuclide 类属性
 
 ```python
-from database_loader import NuclideDataLoader
+nuc = Nuclide(26, 30)
 
-# 使用详细配置，显示不确定度
-loader = NuclideDataLoader(query_config="detailed")
-data = loader.get_nuclide_data(6, 8)  # C-14
-output = loader.format_nuclide_output(data)
-print(output)
+# 基本信息
+nuc.Z           # 质子数
+nuc.N           # 中子数
+nuc.A           # 质量数
+nuc.name        # "Fe-56"
+nuc.symbol      # "Fe"
+nuc.exists      # 是否存在
+nuc.source      # 数据源名称
+
+# 结合能 (MeV)
+nuc.BE          # 总结合能
+nuc.BE_A        # 比结合能
+
+# 分离能 (MeV)
+nuc.Sn          # 单中子分离能
+nuc.Sp          # 单质子分离能
+nuc.S2n         # 双中子分离能
+nuc.S2p         # 双质子分离能
+
+# Q 值 (MeV)
+nuc.Q_alpha     # α衰变 Q 值
+nuc.Q_beta      # β⁻衰变 Q 值
+nuc.Q_EC        # 电子俘获 Q 值
+
+# 激发态能量 (MeV)
+nuc.E_2plus     # 第一 2⁺ 态
+nuc.E_4plus     # 第一 4⁺ 态
+nuc.E_3minus    # 第一 3⁻ 态
+
+# 衰变信息（仅实验数据）
+nuc.halflife    # 半衰期
+nuc.spin_parity # 自旋宇称
+nuc.is_stable   # 是否稳定
+nuc.decay_modes # 衰变模式列表
 ```
 
-### 2. 配置自定义查询
+## 📈 绘图示例
 
 ```python
-from nuclide_data import load_query_config
+import matplotlib.pyplot as plt
+from nuclide import get_isotope_chain
 
-# 查看可用配置
-configs = ["basic", "detailed", "research", "quick"]
+# 比较实验与理论的比结合能
+sources = ['experiment', 'SKMS', 'UNEDF1']
+colors = ['black', 'red', 'blue']
 
-# 使用特定配置
-loader = NuclideDataLoader(query_config="research")
+plt.figure(figsize=(10, 6))
+for src, color in zip(sources, colors):
+    isotopes = get_isotope_chain(50, (50, 90), source=src)
+    A = [n.A for n in isotopes if n.BE_A]
+    BE_A = [n.BE_A for n in isotopes if n.BE_A]
+    plt.plot(A, BE_A, 'o-', label=src, color=color, markersize=3)
+
+plt.xlabel('Mass Number A')
+plt.ylabel('BE/A (MeV)')
+plt.legend()
+plt.show()
 ```
 
-## 🔬 数据结构
+## 📁 文件结构
 
-### 核素属性 (NuclideProperties)
-
-```python
-class NuclideProperties(TypedDict, total=False):
-    # 基本属性
-    Z: int                              # 质子数
-    N: int                              # 中子数
-    A: int                              # 质量数
-    name: str                           # 核素名称
-    symbol: str                         # 元素符号
-    
-    # 能量相关
-    binding_energy: ValueWithUncertainty        # 结合能
-    binding_energy_per_nucleon: float           # 比结合能
-    mass_excess: ValueWithUncertainty           # 质量余量
-    
-    # 分离能
-    neutron_separation_energy: ValueWithUncertainty   # 单中子分离能
-    proton_separation_energy: ValueWithUncertainty    # 单质子分离能
-    two_neutron_separation_energy: ValueWithUncertainty  # 双中子分离能
-    two_proton_separation_energy: ValueWithUncertainty   # 双质子分离能
-    
-    # 衰变相关
-    decay_mode: DecayMode               # 主要衰变模式
-    halflife: HalfLifeInfo              # 半衰期
-    
-    # 激发态信息
-    first_excited_state_energy: ValueWithUncertainty
-    first_two_plus_energy: ValueWithUncertainty
-    first_four_plus_energy: ValueWithUncertainty
-    
-    # 其他属性
-    spin_parity: str                    # 自旋宇称
-    abundance: float                    # 自然丰度
-    # ... 更多字段
+```text
+NuclideQuery/
+├── README.md                     # 使用说明（本文件）
+├── setup.py                      # 打包与安装配置
+├── example/                      # 使用示例脚本
+│   ├── example_plot_binding_energy.py
+│   └── examples.py
+├── nucquery/
+│   ├── __init__.py
+│   ├── config.py                 # 全局配置与常量
+│   ├── data_source.py            # 数据源抽象层及管理器
+│   ├── nuclide.py                # Nuclide API
+│   ├── nuclide_data.py           # 数据结构定义
+│   ├── nuclide_query.py          # 命令行入口
+│   ├── rich_output.py            # Rich 终端展示
+│   └── data/                     # 原始实验/理论数据文件
+│       ├── nndc_nudat_data_export.json
+│       ├── SKMS_all_nuclei-new.dat
+│       ├── SKP_all_nuclei.dat
+│       ├── SLY4_all_nuclei.dat
+│       ├── SV-MIN_all_nuclei.dat
+│       ├── UNEDF0_all_nuclei.dat
+│       └── UNEDF1_all_nuclei.dat
+└── nucquery.egg-info/            # Python 包元数据
 ```
 
-### 带不确定度的数值
+## 📝 数据来源
 
-```python
-@dataclass
-class ValueWithUncertainty:
-    value: float                        # 数值
-    uncertainty: float = 0.0            # 不确定度
-    unit: str = ""                      # 单位
-```
+- **实验数据**: [NNDC NuDat](https://www.nndc.bnl.gov/nudat3/)
+- **理论数据**: DFT 能量密度泛函计算
 
-## ⚙️ 配置系统
+## 📄 许可证
 
-### 预定义配置
-
-- **`basic`**: 基础信息 + 自旋宇称
-- **`detailed`**: 详细信息 + 不确定度
-- **`research`**: 研究级配置，包含所有信息
-- **`quick`**: 快速查询，仅核心信息
-
-### 自定义配置
-
-```python
-from nuclide_data import create_custom_config
-
-# 创建自定义配置
-custom_config = create_custom_config(
-    show_binding_energy=True,
-    show_uncertainties=True,
-    show_spin_parity=True,
-    decimal_places=2
-)
-```
-
-## 🧪 测试
-
-运行系统性测试：
-
-```bash
-python test_system.py
-```
-
-测试覆盖：
-
-- ✅ 模块导入测试
-- ✅ 数据加载测试（3603个核素数据）
-- ✅ 查询配置测试
-- ✅ 数据结构测试
-- ✅ 单核素查询测试
-- ✅ 批量查询测试
-- ✅ 格式化输出测试
-
-## 📋 支持的数据字段
-
-### 基本信息
-
-- 质子数、中子数、质量数
-- 元素符号、核素名称
-- 自旋宇称、自然丰度
-
-### 能量信息
-
-- 结合能、比结合能
-- 质量余量
-- 各种分离能（SN, SP, S2N, S2P, Sα）
-
-### 衰变信息
-
-- 衰变模式、半衰期
-- 各种衰变能量（α, β±, EC等）
-
-### 激发态信息
-
-- 第一激发态能量
-- 特定态能量（2+, 4+, 3-）
-- 能级比值（4+/2+）
-
-### 核裂变产额
-
-- U-235, U-238, Pu-239, Cf-252裂变产额
-- 累积裂变产额
-
-## 📝 版本信息
-
-**v1.0.0-beta** (2025-07-07)
-
-### 最新改进
-
-- ✅ **重写输出格式**：全新设计的美观清晰的输出格式
-- ✅ **修复半衰期显示**：解决了半衰期查询显示问题
-- ✅ **改进不确定度处理**：支持对称和非对称不确定度格式
-- ✅ **优化代码结构**：简化了格式化逻辑，提高可维护性
-- ✅ **完善类型安全**：零类型检查错误，完整的类型注解
-- ✅ **数据验证**：基于NNDC NUDAT数据的3603个核素数据验证
-
-### 主要特性
-
-- 完整的类型安全系统
-- 基于NNDC NUDAT数据的3603个核素数据
-- 灵活的配置系统（basic, detailed, research, quick）
-- 美观的格式化输出
-- 全面的测试覆盖
-- 完整的错误处理
-
-### 已知问题
-
-- 无重大已知问题
-
-### 技术规格
-
-- Python 3.8+
-- 基于TypedDict的类型安全
-- 支持dataclass数据结构
-- 完整的类型注解
-
-## 🛠️ 开发
-
-### 数据源
-
-- NNDC NUDAT数据库
-- 数据文件：`nndc_nudat_data_export.json`
-
-### 核心模块
-
-- `database_loader.py`: 数据加载和处理
-- `nuclide_data.py`: 数据结构定义
-- `config.py`: 配置管理
-- `nuclide_query.py`: 单核素查询
-- `batch_nuclide_query.py`: 批量查询
-
-### 代码质量
-
-- 完整的类型注解
-- 零类型检查错误
-- 全面的错误处理
-- 详细的文档字符串
-
-## 📞 使用支持
-
-### 基本用法
-
-```python
-from database_loader import NuclideDataLoader
-
-# 创建加载器
-loader = NuclideDataLoader()
-
-# 查询核素
-data = loader.get_nuclide_data(Z=26, N=30)  # Fe-56
-if data:
-    print(loader.format_nuclide_output(data))
-```
-
-### 详细模式
-
-```python
-# 显示不确定度信息
-loader = NuclideDataLoader(query_config="detailed") 
-data = loader.get_nuclide_data(Z=6, N=8)  # C-14
-print(loader.format_nuclide_output(data))
-```
-
----
-
-> 基于NNDC NUDAT数据库构建的核素查询工具 - 为核物理研究提供准确、便捷的核素数据查询服务
+MIT License

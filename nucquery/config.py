@@ -82,7 +82,7 @@ class QueryConfig:
             self.show_energy_info = True
             self.show_separation_info = True
             self.show_Q_values = True
-            self.show_excitation_states_energy = True
+            self.show_excitation_energy = True
             self.show_fission_yields = True
             self.show_levels = True
             self.show_uncertainties = True
@@ -91,7 +91,7 @@ class QueryConfig:
             self.show_energy_info = False
             self.show_separation_info = False
             self.show_Q_values = False
-            self.show_excitation_states_energy = False
+            self.show_excitation_energy = False
             self.show_fission_yields = False
             self.show_levels = False
             self.show_uncertainties = False
@@ -116,4 +116,4 @@ BATCH_QUERY_CSV_FIELDS = [
 # ====================================================
 
 # 数据文件路径
-DATA_FILE_PATH = "nndc_nudat_data_export.json"
+DATA_FILE_PATH = "data/nndc_nudat_data_export.json"

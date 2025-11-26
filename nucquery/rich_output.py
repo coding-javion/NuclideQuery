@@ -20,8 +20,8 @@ from rich.box import ROUNDED
 from rich.align import Align
 from rich.measure import Measurement
 
-from nuclide_data import NuclideProperties
-from config import QueryConfig
+from .nuclide_data import NuclideProperties
+from .config import QueryConfig
 class NuclideRichPrinter:
     """核素数据的美观输出类"""
     
@@ -193,7 +193,6 @@ class NuclideRichPrinter:
                 table.add_column(name, width=width, style=style)
         else:
             # 默认两列布局 (4:6比例)
-                    # 设置列宽比例 (4:6)
             key_width = int(self.table_width * 0.4)
             value_width = int(self.table_width * 0.6)
             table.add_column("属性", width=key_width, style=style)
@@ -221,9 +220,7 @@ class NuclideRichPrinter:
             参数:
                 table: 要添加行的表格对象
                 key: 列名
-                value: 列值，可以是字符串、数值或Rich Text对象
                 data_key: 数据键，用于获取数据
-                style: 列样式
             """
             data = nuclide_data.get(data_key)
             if data:
@@ -252,20 +249,25 @@ class NuclideRichPrinter:
             
             for name, width, style in columns:
                 minimal_table.add_column(name, width=width, style=style)
-                
-            decay_mode_list = nuclide_data.get('ground_state').decay_modes_observed
+
+            ground_state = nuclide_data.get('ground_state')
+            decay_mode_list = ground_state.decay_modes_observed if ground_state else []
             decay_mode_texts = []
-            for mode in decay_mode_list:
+            for mode in decay_mode_list if decay_mode_list else []:
                 decay_mode_texts.append(
                     Text(f"{mode.mode}", style=self.theme['level'])
                 )
             decay_mode_text = Text.assemble(*[item for text in decay_mode_texts for item in (text, Text("/"))])[:-1]
             
+            ground_state = nuclide_data.get('ground_state')
+            halflife = ground_state.halflife if ground_state and hasattr(ground_state, 'halflife') else None
+            spin_parity = ground_state.spin_parity if ground_state and hasattr(ground_state, 'spin_parity') else None
+            
             minimal_table.add_row(Text(f"{A}{symbol}(Z={Z},N={N})", style=self.theme['element']),
                                   self.format_value(nuclide_data.get('bindingEnergy'), style=self.theme['energy']),
-                                  self.format_value(nuclide_data.get('ground_state', {}).halflife, style=self.theme['level']),
+                                  self.format_value(halflife, style=self.theme['level']),
                                     self.format_value(decay_mode_text, style=self.theme['level']),
-                                  self.format_value(nuclide_data.get('ground_state', {}).spin_parity, style=self.theme['level']))
+                                  self.format_value(spin_parity, style=self.theme['level']))
             
             self.console.print(Align.center(minimal_table))
             
@@ -383,7 +385,7 @@ class NuclideRichPrinter:
             if energy_levels:                
                 # 定义能级表格的列
                 energy_columns = [
-                    ("能量 (MeV)", int(self.table_width*0.18), self.theme['value']),
+                    ("能量", int(self.table_width*0.18), self.theme['value']),
                     ("半衰期", int(self.table_width*0.30), self.theme['value']),
                     ("自旋宇称", int(self.table_width*0.12), self.theme['value']),
                     ("衰变模式", int(self.table_width*0.12), self.theme['value']),
@@ -424,7 +426,7 @@ class NuclideRichPrinter:
                 
                 self.console.print(Align.center(energy_table))
     
-    def print_search_results(self, results: List[NuclideProperties], title: str = "查询结果") -> None:
+    def print_nuclides_info(self, results: List[NuclideProperties]) -> None:
         """打印搜索结果列表"""
         if not results:
             self.console.print(Panel(
@@ -443,7 +445,7 @@ class NuclideRichPrinter:
         ]
         
         table = self._create_standard_table(
-            title=f"📊 {title} ({len(results)} 个结果)",
+            title=f"📊 查询结果 ({len(results)} 个结果)",
             show_header=True,
             columns=search_columns
         )
